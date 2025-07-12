@@ -35,13 +35,13 @@
             overflow: hidden;
         }
         #gameContainer {
-            width: 1050px;
-            height: 650px;
+            width: 1200px;
+            height: 720px;
             max-width: 98vw;
-            max-height: 96vh;
+            max-height: 98vh;
             margin: auto;
             border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
             border: 3px solid #4a5568;
             background: transparent;
             display: flex;
@@ -64,7 +64,7 @@
         }
         #ui-panel {
             width: 320px;
-            min-width: 270px;
+            min-width: 260px;
             background: linear-gradient(180deg,#4a5568 0%,#2d3748 100%);
             color: white;
             padding: 24px 16px;
@@ -122,11 +122,9 @@
     </div>
 </div>
 <script>
-// -----------------------------------------
-// MAPA I SKALOWANIE (pełne dynamiczne!)
-// -----------------------------------------
+// --------- MAPA i SKALOWANIE
 const MAP_COLS = 25;
-const MAP_ROWS = 18;
+const MAP_ROWS = 14;
 const gameMap = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,2,0,0,1,3,0,0,1,0,0,0,0,0,0,1,5,0,0,0,1,3,0,0,1],
@@ -141,8 +139,102 @@ const gameMap = [
     [1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,1,1,1,1,1,1,5,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
     [1,0,0,0,1,4,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,4,0,0,1],
-    [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,1,0,3,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,5,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,1],
-    [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]()
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let tileSize;
+function resizeCanvas() {
+    const wrapper = document.getElementById('canvasWrapper');
+    // Oblicz tileSize tak, by plansza WYPEŁNIŁA wrapper zarówno w pionie jak i poziomie (z zachowaniem proporcji)
+    const availableWidth = wrapper.clientWidth;
+    const availableHeight = wrapper.clientHeight;
+    tileSize = Math.floor(Math.min(availableWidth / MAP_COLS, availableHeight / MAP_ROWS));
+    canvas.width = tileSize * MAP_COLS;
+    canvas.height = tileSize * MAP_ROWS;
+    drawGame();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// --------- GRACZ (LEKARZ)
+let player = {x: 1, y: 1};
+function resetPlayer() {
+    for (let row = 0; row < MAP_ROWS; row++) {
+        for (let col = 0; col < MAP_COLS; col++) {
+            if (gameMap[row][col] === 2) {
+                player.x = col;
+                player.y = row;
+                gameMap[row][col] = 0;
+            }
+        }
+    }
+}
+resetPlayer();
+
+// --------- RYSOWANIE
+function drawGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let row = 0; row < MAP_ROWS; row++) {
+        for (let col = 0; col < MAP_COLS; col++) {
+            let tile = gameMap[row][col];
+            let color = "#cbd5e0";
+            if (tile === 1) color = "#4a5568";
+            if (tile === 3) color = "#f6e05e";
+            if (tile === 4) color = "#f56565";
+            if (tile === 5) color = "#48bb78";
+            ctx.fillStyle = color;
+            ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+            if (tile === 3) drawSymbol(col, row, '🧠');
+            if (tile === 4) drawSymbol(col, row, '💊');
+            if (tile === 5) drawSymbol(col, row, '🧑');
+        }
+    }
+    // Lekarz (sterowana postać)
+    ctx.fillStyle = "#4299e1";
+    ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+    drawSymbol(player.x, player.y, '👨‍⚕️');
+}
+function drawSymbol(x, y, symbol) {
+    ctx.font = `${tileSize * 0.7}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(symbol, x * tileSize + tileSize / 2, y * tileSize + tileSize / 2);
+}
+
+// --------- STEROWANIE LEKARZEM
+window.addEventListener('keydown', (e) => {
+    let dx = 0, dy = 0;
+    switch(e.key) {
+        case 'ArrowUp': dy = -1; break;
+        case 'ArrowDown': dy = 1; break;
+        case 'ArrowLeft': dx = -1; break;
+        case 'ArrowRight': dx = 1; break;
+        default: return;
+    }
+    e.preventDefault();
+    movePlayer(dx, dy);
+});
+function movePlayer(dx, dy) {
+    const nextX = player.x + dx;
+    const nextY = player.y + dy;
+    if (nextY < 0 || nextY >= MAP_ROWS || nextX < 0 || nextX >= MAP_COLS || gameMap[nextY][nextX] === 1) {
+        return;
+    }
+    player.x = nextX;
+    player.y = nextY;
+    drawGame();
+}
+
+// --------- PANEL BOCZNY (placeholder – uzupełnij pełną logiką)
+function updateUI() {
+    document.getElementById('knowledge').textContent = "0";
+    document.getElementById('meds').textContent = "0";
+    document.getElementById('patients-progress').textContent = "0/0";
+}
+
+// --------- INICJALIZACJA
+updateUI();
+resizeCanvas();
+</script>
+</body>
+</html>
