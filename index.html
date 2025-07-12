@@ -9,8 +9,7 @@
     <style>
         body { font-family: 'Inter', sans-serif; overflow: hidden; margin: 0; padding: 20px; box-sizing: border-box; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         #gameContainer { position: relative; display: flex; flex-direction: row; border: 3px solid #4a5568; border-radius: 20px; background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
-        #canvasWrapper { display: flex; align-items: center; justify-content: center; background: #f7fafc; }
-        canvas { display: block; background: #f7fafc; }
+        canvas { display: block; background: #f7fafc; flex-shrink: 0; }
         #ui-panel { width: 320px; min-width: 320px; padding:24px; background:linear-gradient(180deg,#4a5568 0%,#2d3748 100%); color:white; display:flex; flex-direction:column; gap:20px; box-sizing: border-box; }
         .info-box { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); padding:20px; border-radius:12px; backdrop-filter:blur(10px); }
         .info-box h2 { font-size:16px; font-weight:600; margin-bottom:16px; color:#90cdf4; text-align:center; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:8px; }
@@ -32,9 +31,7 @@
 </head>
 <body>
 <div id="gameContainer">
-    <div id="canvasWrapper">
-        <canvas id="gameCanvas"></canvas>
-    </div>
+    <canvas id="gameCanvas"></canvas>
     <div id="ui-panel">
         <div class="info-box"><h2>🏥 Status Lekarza</h2><div class="resource"><span>🧠 Wiedza:</span><span id="knowledge" class="value">0</span></div><div class="resource"><span>💊 Leki:</span><span id="meds" class="value">0</span></div></div>
         <div class="info-box"><h2>🎮 Sterowanie</h2><p>Używaj strzałek do poruszania się</p><div class="controls"><div class="control-key">↑</div><div class="control-key">←</div><div class="control-key">↓</div><div class="control-key">→</div></div></div>
@@ -94,14 +91,13 @@ const drugInfos = {
 // KONFIGURACJA I ZMIENNE GLOBALNE
 // =================================================================================
 const TILE_SIZE = 32;
-const MAP_COLS = 20; // Zmniejszono liczbę kolumn
+const MAP_COLS = 20;
 const MAP_ROWS = 18;
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 canvas.width = MAP_COLS * TILE_SIZE;
 canvas.height = MAP_ROWS * TILE_SIZE;
-document.getElementById('ui-panel').style.height = `${canvas.height}px`; // Dopasuj wysokość panelu UI
 
 const knowledgeUI = document.getElementById('knowledge');
 const medsUI = document.getElementById('meds');
@@ -116,7 +112,6 @@ const modalOkBtn = document.getElementById('modal-ok');
 const TILES = { FLOOR: 0, WALL: 1, PLAYER: 2, KNOWLEDGE: 3, MEDS: 4, PATIENT: 5 };
 const COLORS = { WALL: '#4a5568', FLOOR: '#cbd5e0', PLAYER: '#4299e1', KNOWLEDGE: '#f6e05e', MEDS: '#f56565', PATIENT: '#48bb78' };
 
-// Nowa, węższa mapa gry
 const gameMap = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,2,0,3,1,0,0,0,0,0,0,0,0,1,5,0,0,4,0,1],
@@ -253,7 +248,7 @@ function drawGame() {
         }
     }
     drawTile(player.x, player.y, COLORS.PLAYER);
-    drawSymbol(player.x, player.y, '�‍⚕️');
+    drawSymbol(player.x, player.y, '👨‍⚕️');
 }
 
 function drawTile(x, y, color) {
@@ -262,10 +257,11 @@ function drawTile(x, y, color) {
 }
 
 function drawSymbol(x, y, symbol) {
-    ctx.font = `${TILE_SIZE * 0.7}px sans-serif`;
+    ctx.font = `${TILE_SIZE * 0.75}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(symbol, x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2);
+    // Dodano małą korektę pionową dla lepszego wyśrodkowania emoji
+    ctx.fillText(symbol, x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2 + 2);
 }
 
 // =================================================================================
@@ -413,4 +409,3 @@ init();
 </script>
 </body>
 </html>
-�
