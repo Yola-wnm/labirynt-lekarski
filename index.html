@@ -1,240 +1,195 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <script>
-      // Ochrona osadzania na wybranych domenach
-      const allowedDomains = ["bethink.pl", "wiecejnizmatura.pl"];
-      function isAllowedReferrer(ref) {
-        if (!ref) return false;
-        try {
-          const url = new URL(ref);
-          return allowedDomains.some(domain => url.hostname.endsWith(domain));
-        } catch {
-          return false;
-        }
-      }
-      if (window !== window.parent) {
-        const referrer = document.referrer;
-        if (!isAllowedReferrer(referrer)) {
-          document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;'><h1 style='color:red;text-align:center;font-size:2rem;'>Ta gra może być osadzana <br>tylko na platformach Bethink lub Więcej niż Matura.</h1></div>";
-          throw new Error("Embedding not allowed outside bethink.pl or wiecejnizmatura.pl!");
-        }
-      }
-    </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Szpital - Misja Lekarska</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background: #7756c5;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-        }
-        #gameContainer {
-            width: 1200px;
-            height: 720px;
-            max-width: 98vw;
-            max-height: 98vh;
-            margin: auto;
-            border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-            border: 3px solid #4a5568;
-            background: transparent;
-            display: flex;
-            overflow: hidden;
-        }
-        #canvasWrapper {
-            flex: 1 1 0;
-            height: 100%;
-            background: #7756c5;
-            display: flex;
-            align-items: stretch;
-            justify-content: stretch;
-        }
-        #gameCanvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-            background: #f7fafc;
-            border-radius: 0 20px 20px 0;
-        }
-        #ui-panel {
-            width: 320px;
-            min-width: 260px;
-            background: linear-gradient(180deg,#4a5568 0%,#2d3748 100%);
-            color: white;
-            padding: 24px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            justify-content: stretch;
-        }
-        .info-box {
-            background:rgba(255,255,255,0.1);
-            border:1px solid rgba(255,255,255,0.2);
-            padding:20px;
-            border-radius:12px;
-            backdrop-filter:blur(10px);
-        }
-        .info-box h2 {
-            font-size:16px; font-weight:600; margin-bottom:16px; color:#90cdf4;
-            text-align:center; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:8px;
-        }
-        .resource { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:14px; font-weight:500; }
-        .resource .value { color:#fbbf24; font-weight:700; font-size:16px; }
-        .controls { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
-        .control-key { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); padding:8px; border-radius:6px; text-align:center; font-size:12px; font-weight:500; }
-        #modal-container { position:absolute; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index:100; backdrop-filter:blur(5px); }
-        #modal-content { background:white; padding:32px; border-radius:20px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:500px; margin:20px; }
-        #modal-message { font-size:18px; font-weight:600; color:#2d3748; margin-bottom:16px; }
-        #modal-question { font-size:16px; color:#4a5568; margin-bottom:24px; line-height:1.5; padding:16px; background:#f7fafc; border-radius:12px; border-left:4px solid #4299e1; text-align: left; }
-        .modal-button { margin: 8px 0; padding: 12px 24px; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; transition:all .2s; width: 100%; }
-        .option-button { background:#e2e8f0; color:#2d3748; } .option-button:hover { background:#cbd5e0; }
-        .ok-button { background:#4299e1; color:white; } .ok-button:hover { background:#3182ce; }
-        #modal-feedback { margin-top:20px; padding:16px; border-radius:12px; font-weight:600; display: none; }
-        .feedback-correct { background:#c6f6d5; color:#22543d; border:1px solid #9ae6b4; }
-        .feedback-incorrect { background:#fed7d7; color:#742a2a; border:1px solid #fc8181; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Labirynt Lekarski</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      height:100%; margin:0; padding:0;
+      background:#7756c5; font-family:'Inter',sans-serif; overflow:hidden;
+    }
+    #gameContainer {
+      width:1050px; height:650px;
+      max-width:98vw; max-height:96vh;
+      margin:auto; display:flex; overflow:hidden;
+      border:3px solid #4a5568; border-radius:24px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3);
+    }
+    #canvasWrapper {
+      flex:1; height:100%; background:#7756c5;
+      display:flex; align-items:stretch; justify-content:stretch;
+    }
+    canvas {
+      width:100% !important; height:100% !important;
+      display:block; background:#f7fafc;
+      border-radius:0 20px 20px 0;
+    }
+    #ui-panel {
+      width:320px; min-width:260px;
+      background:linear-gradient(180deg,#4a5568 0%,#2d3748 100%);
+      color:#fff; padding:24px 16px;
+      display:flex; flex-direction:column; gap:20px;
+    }
+    .info-box {
+      background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.2);
+      padding:20px; border-radius:12px;
+      backdrop-filter:blur(10px);
+    }
+    .info-box h2 {
+      font-size:16px; font-weight:600; margin:0 0 12px;
+      color:#90cdf4; text-align:center;
+      border-bottom:1px solid rgba(255,255,255,0.2);
+      padding-bottom:8px;
+    }
+    .resource {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:14px; font-weight:500; margin-bottom:8px;
+    }
+    .resource .value { color:#fbbf24; font-weight:700; }
+    .controls {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+      margin-top:8px;
+    }
+    .control-key {
+      background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.2);
+      border-radius:6px; padding:8px;
+      text-align:center; font-size:12px; font-weight:500;
+    }
+  </style>
 </head>
 <body>
-<div id="gameContainer">
+  <div id="gameContainer">
     <div id="canvasWrapper">
-        <canvas id="gameCanvas"></canvas>
+      <canvas id="gameCanvas"></canvas>
     </div>
     <div id="ui-panel">
-        <div class="info-box"><h2>🏥 Status Lekarza</h2><div class="resource"><span>🧠 Wiedza:</span><span id="knowledge" class="value">0</span></div><div class="resource"><span>💊 Leki:</span><span id="meds" class="value">0</span></div></div>
-        <div class="info-box"><h2>🎮 Sterowanie</h2><p>Używaj strzałek do poruszania się</p><div class="controls"><div class="control-key">↑</div><div class="control-key">←</div><div class="control-key">↓</div><div class="control-key">→</div></div></div>
-        <div class="info-box"><h2>🎯 Misja</h2><p>Pomóż wszystkim pacjentom, wykorzystując swoją wiedzę i zebrane leki.</p></div>
-        <div class="info-box"><h2>📊 Postęp</h2><p>Wyleczeni pacjenci: <span id="patients-progress">0/0</span></p></div>
-    </div>
-    <div id="modal-container">
-        <div id="modal-content">
-            <div id="modal-message"></div>
-            <div id="modal-question"></div>
-            <div id="modal-buttons"></div>
-            <div id="modal-feedback"></div>
-            <button id="modal-ok" class="modal-button ok-button" style="display:none;">Kontynuuj</button>
+      <div class="info-box">
+        <h2>🏥 Status Lekarza</h2>
+        <div class="resource"><span>🧠 Wiedza:</span><span id="knowledge" class="value">0</span></div>
+        <div class="resource"><span>💊 Leki:</span><span id="meds" class="value">0</span></div>
+      </div>
+      <div class="info-box">
+        <h2>🎮 Sterowanie</h2>
+        <p>Używaj strzałek do poruszania się</p>
+        <div class="controls">
+          <div class="control-key">↑</div>
+          <div class="control-key">←</div>
+          <div class="control-key">↓</div>
+          <div class="control-key">→</div>
         </div>
+      </div>
+      <div class="info-box">
+        <h2>🎯 Misja</h2>
+        <p>Pomóż wszystkim pacjentom wykorzystując zebraną wiedzę i leki.</p>
+      </div>
+      <div class="info-box">
+        <h2>📊 Postęp</h2>
+        <p>Wyleczeni pacjenci: <span id="patients-progress">0/0</span></p>
+      </div>
     </div>
-</div>
-<script>
-// --------- MAPA i SKALOWANIE
-const MAP_COLS = 25;
-const MAP_ROWS = 14;
-const gameMap = [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,2,0,0,1,3,0,0,1,0,0,0,0,0,0,1,5,0,0,0,1,3,0,0,1],
-    [1,0,0,4,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,4,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,1,1,0,1,1,1,0,1,1,4,0,1,0,1,1,1,0,1,1,1,0,1,1,1],
-    [1,4,0,0,1,0,0,0,1,0,0,0,0,0,1,5,0,0,0,0,0,0,0,4,1],
-    [1,0,0,0,1,0,3,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0,4,0,0,0,0,1,0,0,0,0,0,4,0,0,0,1],
-    [1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,1],
-    [1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,1,1,1,1,1,1,5,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
-    [1,0,0,0,1,4,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,4,0,0,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-];
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let tileSize;
-function resizeCanvas() {
-    const wrapper = document.getElementById('canvasWrapper');
-    // Oblicz tileSize tak, by plansza WYPEŁNIŁA wrapper zarówno w pionie jak i poziomie (z zachowaniem proporcji)
-    const availableWidth = wrapper.clientWidth;
-    const availableHeight = wrapper.clientHeight;
-    tileSize = Math.floor(Math.min(availableWidth / MAP_COLS, availableHeight / MAP_ROWS));
-    canvas.width = tileSize * MAP_COLS;
-    canvas.height = tileSize * MAP_ROWS;
-    drawGame();
-}
-window.addEventListener('resize', resizeCanvas);
+  </div>
 
-// --------- GRACZ (LEKARZ)
-let player = {x: 1, y: 1};
-function resetPlayer() {
-    for (let row = 0; row < MAP_ROWS; row++) {
-        for (let col = 0; col < MAP_COLS; col++) {
-            if (gameMap[row][col] === 2) {
-                player.x = col;
-                player.y = row;
-                gameMap[row][col] = 0;
-            }
+  <script>
+    // --- MAPA (2 = start lekarza)
+    const MAP_COLS = 25, MAP_ROWS = 14;
+    const gameMap = [
+      [1,2,0,0,1,3,0,0,1,0,0,0,0,0,0,1,5,0,0,0,1,3,0,0,1],
+      [1,0,0,4,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,4,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,0,1,1,1,0,1,1,4,0,1,0,1,1,1,0,1,1,1,0,1,1,1],
+      [1,4,0,0,1,0,0,0,1,0,0,0,0,0,1,5,0,0,0,0,0,0,0,4,1],
+      [1,0,0,0,1,0,3,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,4,0,0,0,0,1,0,0,0,0,0,4,0,0,0,1],
+      [1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,1],
+      [1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,0,0,0,1,1,1,1,1,1,5,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,4,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,4,0,0,1],
+      [1,0,0,0,1,0,3,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    // -- CANVAS i SKALOWANIE
+    const canvas = document.getElementById('gameCanvas'),
+          ctx = canvas.getContext('2d');
+    let tileSize;
+    function resizeCanvas(){
+      const wrapper = document.getElementById('canvasWrapper'),
+            aw = wrapper.clientWidth,
+            ah = wrapper.clientHeight;
+      tileSize = Math.floor(Math.min(aw/MAP_COLS, ah/MAP_ROWS));
+      canvas.width = tileSize*MAP_COLS;
+      canvas.height = tileSize*MAP_ROWS;
+      drawGame();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // -- GRACZ
+    let player = {x:0,y:0};
+    function placePlayer(){
+      for(let y=0;y<MAP_ROWS;y++){
+        for(let x=0;x<MAP_COLS;x++){
+          if(gameMap[y][x]===2){
+            player.x=x; player.y=y;
+            gameMap[y][x]=0;
+            return;
+          }
         }
+      }
     }
-}
-resetPlayer();
 
-// --------- RYSOWANIE
-function drawGame() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let row = 0; row < MAP_ROWS; row++) {
-        for (let col = 0; col < MAP_COLS; col++) {
-            let tile = gameMap[row][col];
-            let color = "#cbd5e0";
-            if (tile === 1) color = "#4a5568";
-            if (tile === 3) color = "#f6e05e";
-            if (tile === 4) color = "#f56565";
-            if (tile === 5) color = "#48bb78";
-            ctx.fillStyle = color;
-            ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
-            if (tile === 3) drawSymbol(col, row, '🧠');
-            if (tile === 4) drawSymbol(col, row, '💊');
-            if (tile === 5) drawSymbol(col, row, '🧑');
+    // -- RYSOWANIE
+    function drawGame(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(let y=0;y<MAP_ROWS;y++){
+        for(let x=0;x<MAP_COLS;x++){
+          let t=gameMap[y][x], c='#cbd5e0';
+          if(t===1) c='#4a5568';
+          if(t===3) c='#f6e05e';
+          if(t===4) c='#f56565';
+          if(t===5) c='#48bb78';
+          ctx.fillStyle=c;
+          ctx.fillRect(x*tileSize,y*tileSize,tileSize,tileSize);
+          if(t===3) drawSym(x,y,'🧠');
+          if(t===4) drawSym(x,y,'💊');
+          if(t===5) drawSym(x,y,'🤒');
         }
+      }
+      // lekarz
+      ctx.fillStyle='#4299e1';
+      ctx.fillRect(player.x*tileSize,player.y*tileSize,tileSize,tileSize);
+      drawSym(player.x,player.y,'👨‍⚕️');
     }
-    // Lekarz (sterowana postać)
-    ctx.fillStyle = "#4299e1";
-    ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
-    drawSymbol(player.x, player.y, '👨‍⚕️');
-}
-function drawSymbol(x, y, symbol) {
-    ctx.font = `${tileSize * 0.7}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(symbol, x * tileSize + tileSize / 2, y * tileSize + tileSize / 2);
-}
-
-// --------- STEROWANIE LEKARZEM
-window.addEventListener('keydown', (e) => {
-    let dx = 0, dy = 0;
-    switch(e.key) {
-        case 'ArrowUp': dy = -1; break;
-        case 'ArrowDown': dy = 1; break;
-        case 'ArrowLeft': dx = -1; break;
-        case 'ArrowRight': dx = 1; break;
-        default: return;
+    function drawSym(x,y,s){
+      ctx.font=`${tileSize*0.7}px sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(s,x*tileSize+tileSize/2,y*tileSize+tileSize/2);
     }
-    e.preventDefault();
-    movePlayer(dx, dy);
-});
-function movePlayer(dx, dy) {
-    const nextX = player.x + dx;
-    const nextY = player.y + dy;
-    if (nextY < 0 || nextY >= MAP_ROWS || nextX < 0 || nextX >= MAP_COLS || gameMap[nextY][nextX] === 1) {
-        return;
-    }
-    player.x = nextX;
-    player.y = nextY;
-    drawGame();
-}
 
-// --------- PANEL BOCZNY (placeholder – uzupełnij pełną logiką)
-function updateUI() {
-    document.getElementById('knowledge').textContent = "0";
-    document.getElementById('meds').textContent = "0";
-    document.getElementById('patients-progress').textContent = "0/0";
-}
+    // -- STEROWANIE
+    window.addEventListener('keydown',e=>{
+      let dx=0,dy=0;
+      if(e.key==='ArrowUp') dy=-1;
+      if(e.key==='ArrowDown') dy=1;
+      if(e.key==='ArrowLeft') dx=-1;
+      if(e.key==='ArrowRight') dx=1;
+      if(dx||dy){
+        e.preventDefault();
+        const nx=player.x+dx, ny=player.y+dy;
+        if(ny>=0&&ny<MAP_ROWS&&nx>=0&&nx<MAP_COLS&&gameMap[ny][nx]!==1){
+          player.x=nx; player.y=ny;
+          drawGame();
+        }
+      }
+    });
 
-// --------- INICJALIZACJA
-updateUI();
-resizeCanvas();
-</script>
+    // -- START
+    placePlayer();
+    resizeCanvas();
+  </script>
 </body>
 </html>
