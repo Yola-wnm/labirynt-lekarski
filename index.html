@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szpital - Misja Lekarska</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; margin: 0; padding: 20px; box-sizing: border-box; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        #gameContainer { position: relative; display: flex; flex-direction: row; border: 3px solid #4a5568; border-radius: 20px; background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; max-width: 1200px; max-height: 800px; }
+        #canvasWrapper { display: flex; align-items: center; justify-content: center; background: #f7fafc; }
+        canvas { display: block; background: #f7fafc; box-shadow: 0 0 8px #e2e8f0; border-radius: 0 20px 20px 0; }
+        #ui-panel { width: 320px; min-width: 320px; padding:24px; background:linear-gradient(180deg,#4a5568 0%,#2d3748 100%); color:white; display:flex; flex-direction:column; gap:20px; }
+        .info-box { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); padding:20px; border-radius:12px; backdrop-filter:blur(10px); }
+        .info-box h2 { font-size:16px; font-weight:600; margin-bottom:16px; color:#90cdf4; text-align:center; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:8px; }
+        .resource { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:14px; font-weight:500; }
+        .resource .value { color:#fbbf24; font-weight:700; font-size:16px; }
+        .controls { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+        .control-key { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); padding:8px; border-radius:6px; text-align:center; font-size:12px; font-weight:500; }
+        #modal-container { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; justify-content:center; align-items:center; z-index:100; backdrop-filter:blur(5px); }
+        #modal-content { background:white; padding:32px; border-radius:20px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:500px; margin:20px; }
+        #modal-message { font-size:18px; font-weight:600; color:#2d3748; margin-bottom:16px; }
+        #modal-question { font-size:16px; color:#4a5568; margin-bottom:24px; line-height:1.5; padding:16px; background:#f7fafc; border-radius:12px; border-left:4px solid #4299e1; text-align: left; }
+        .modal-button { margin: 8px 0; padding: 12px 24px; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; transition:all .2s; width: 100%; }
+        .option-button { background:#e2e8f0; color:#2d3748; } .option-button:hover { background:#cbd5e0; }
+        .ok-button { background:#4299e1; color:white; } .ok-button:hover { background:#3182ce; }
+        #modal-feedback { margin-top:20px; padding:16px; border-radius:12px; font-weight:600; display: none; }
+        .feedback-correct { background:#c6f6d5; color:#22543d; border:1px solid #9ae6b4; }
+        .feedback-incorrect { background:#fed7d7; color:#742a2a; border:1px solid #fc8181; }
+    </style>
+</head>
+<body>
+<div id="gameContainer">
+    <div id="canvasWrapper">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <div id="ui-panel">
+        <div class="info-box"><h2>🏥 Status Lekarza</h2><div class="resource"><span>🧠 Wiedza:</span><span id="knowledge" class="value">0</span></div><div class="resource"><span>💊 Leki:</span><span id="meds" class="value">0</span></div></div>
+        <div class="info-box"><h2>🎮 Sterowanie</h2><p>Używaj strzałek do poruszania się</p><div class="controls"><div class="control-key">↑</div><div class="control-key">←</div><div class="control-key">↓</div><div class="control-key">→</div></div></div>
+        <div class="info-box"><h2>🎯 Misja</h2><p>Pomóż wszystkim pacjentom, wykorzystując swoją wiedzę i zebrane leki.</p></div>
+        <div class="info-box"><h2>📊 Postęp</h2><p>Wyleczeni pacjenci: <span id="patients-progress">0/0</span></p></div>
+    </div>
+    <div id="modal-container">
+        <div id="modal-content">
+            <div id="modal-message"></div>
+            <div id="modal-question"></div>
+            <div id="modal-buttons"></div>
+            <div id="modal-feedback"></div>
+            <button id="modal-ok" class="modal-button ok-button" style="display:none;">Kontynuuj</button>
+        </div>
+    </div>
+</div>
+<script>
+// =================================================================================
+// BAZA WIEDZY MEDYCZNEJ
+// =================================================================================
+const medicalData = [
+    { id: 1, name: "Zaburzenia spostrzegania (omamy)", recommended: ["Rysperydon", "Olanzapina"], contraindicated: ["Lewodopa", "Kortykosteroidy"], info: "Leki przeciwpsychotyczne (Rysperydon, Olanzapina) blokują receptory dopaminy i serotoniny, hamując omamy. Lewodopa i kortykosteroidy mogą je nasilać." },
+    { id: 2, name: "Zaburzenia pamięci", recommended: ["Donepezil", "Riwastygmina"], contraindicated: ["Benzodiazepiny", "Amitryptylina"], info: "Inhibitory acetylocholinesterazy (Donepezil) zwiększają ilość acetylocholiny, wspomagając pamięć. Benzodiazepiny i leki antycholinergiczne pogarszają funkcje poznawcze." },
+    { id: 3, name: "Zaburzenia myślenia (urojenia)", recommended: ["Klozapina", "Haloperidol"], contraindicated: ["Amfetamina", "Kortykosteroidy"], info: "Neuroleptyki (Klozapina, Haloperidol) blokują receptory dopaminy, opanowując urojenia. Stymulanty i kortykosteroidy mogą je pogłębiać." },
+    { id: 4, name: "Zaburzenia aktywności ruchowej", recommended: ["Lorazepam", "Haloperidol"], contraindicated: ["TLPD", "Depotowe neuroleptyki"], info: "Lorazepam redukuje napięcie katatoniczne, a Haloperidol hamuje pobudzenie. Leki przeciwdepresyjne trójpierścieniowe (TLPD) mogą nasilać pobudzenie." },
+    { id: 5, name: "Zaburzenia woli i działania", recommended: ["Sertralina", "Aripiprazol"], contraindicated: ["Leki antycholinergiczne", "Barbiturany"], info: "SSRI (Sertralina) i Aripiprazol poprawiają napęd i motywację. Leki antycholinergiczne i barbiturany nasilają deficyty poznawcze i brak kontroli." },
+    { id: 6, name: "Zaburzenia uczuciowości (depresja, mania)", recommended: ["Fluoksetyna", "Lit"], contraindicated: ["Reboksetyna", "Kortykosteroidy"], info: "SSRI (Fluoksetyna) i stabilizatory nastroju (Lit) leczą depresję i manię. Kortykosteroidy mogą wywołać manię." },
+    { id: 7, name: "Zaburzenia świadomości (delirium)", recommended: ["Haloperidol", "Rysperydon"], contraindicated: ["Benzodiazepiny", "Leki antycholinergiczne"], info: "Haloperidol skutecznie hamuje objawy delirium. Benzodiazepiny i leki antycholinergiczne pogłębiają zaburzenia świadomości." },
+    { id: 8, name: "Zaburzenia nawyków i popędów", recommended: ["Naltrekson", "Fluoksetyna"], contraindicated: ["Amfetamina", "Barbiturany"], info: "Naltrekson i SSRI (Fluoksetyna) zmniejszają przymus i impulsywność. Amfetamina i barbiturany nasilają ryzykowne zachowania." },
+    { id: 9, name: "Choroba Alzheimera", recommended: ["Donepezil", "Memantyna"], contraindicated: ["Leki antycholinergiczne", "Benzodiazepiny"], info: "Donepezil i Memantyna poprawiają funkcje poznawcze i chronią komórki nerwowe. Leki antycholinergiczne i benzodiazepiny pogarszają stan pacjenta." },
+    { id: 10, name: "Otępienie naczyniowe", recommended: ["Kwasy omega-3", "Galantamina"], contraindicated: ["Leki antycholinergiczne", "Neuroleptyki klasyczne"], info: "Galantamina poprawia funkcje poznawcze. Neuroleptyki klasyczne zwiększają ryzyko incydentów naczyniowych." },
+    { id: 11, name: "Otępienie mieszane", recommended: ["Riwastygmina", "Memantyna"], contraindicated: ["Benzodiazepiny", "Leki antycholinergiczne"], info: "Riwastygmina i Memantyna działają korzystnie w obu typach otępienia. Benzodiazepiny i leki antycholinergiczne nasilają objawy." },
+    { id: 12, name: "Otępienie z ciałami Lewy’ego", recommended: ["Riwastygmina", "Donepezil"], contraindicated: ["Haloperidol", "Olanzapina"], info: "Riwastygmina i Donepezil poprawiają funkcje poznawcze. Haloperidol i Olanzapina mogą wywołać ciężkie powikłania ruchowe." },
+    { id: 13, name: "Otępienie czołowo-skroniowe", recommended: ["Trazodon", "Sertralina"], contraindicated: ["Inhibitory cholinesterazy", "Klozapina"], info: "Trazodon i SSRI redukują zaburzenia zachowania. Inhibitory cholinesterazy są nieskuteczne i mogą nasilać pobudzenie." },
+];
+
+const drugInfos = {
+    "Rysperydon": "Atypowy lek przeciwpsychotyczny. Blokuje receptory dopaminy (D2) i serotoniny, skutecznie hamując omamy i objawy psychotyczne.",
+    "Olanzapina": "Atypowy lek przeciwpsychotyczny. Działa podobnie do Rysperydonu, stabilizując nastrój i redukując objawy psychotyczne.",
+    "Donepezil": "Inhibitor acetylocholinesterazy. Zwiększa ilość neuroprzekaźnika acetylocholiny w mózgu, co wspomaga pamięć i funkcje poznawcze.",
+    "Riwastygmina": "Podobnie jak Donepezil, jest inhibitorem acetylocholinesterazy. Stosowana w otępieniu typu Alzheimera, Parkinsona i z ciałami Lewy'ego.",
+    "Klozapina": "Bardzo skuteczny neuroleptyk, stosowany w lekoopornej schizofrenii. Pomaga w opanowaniu urojeń i dezorganizacji myślenia.",
+    "Haloperidol": "Klasyczny neuroleptyk, silnie blokujący receptory dopaminowe. Skuteczny w stanach ostrego pobudzenia, delirium i psychozach.",
+    "Lorazepam": "Benzodiazepina o działaniu przeciwlękowym, uspokajającym i przeciwdrgawkowym. Skutecznie redukuje napięcie i objawy katatonii.",
+    "Sertralina": "Lek z grupy SSRI (inhibitor wychwytu zwrotnego serotoniny). Poprawia nastrój, zmniejsza natręctwa i objawy depresji.",
+    "Aripiprazol": "Neuroleptyk o unikalnym mechanizmie (częściowy agonista D2). Poprawia motywację i napęd przy objawach negatywnych schizofrenii.",
+    "Fluoksetyna": "Popularny lek z grupy SSRI. Działa przeciwdepresyjnie i przeciwlękowo, pomaga też w kontroli impulsów.",
+    "Lit": "Klasyczny stabilizator nastroju. Najskuteczniejszy w profilaktyce nawrotów manii i depresji w chorobie afektywnej dwubiegunowej.",
+    "Naltrekson": "Bloker receptorów opioidowych. Zmniejsza uczucie przymusu i euforii w uzależnieniach od alkoholu i opioidów.",
+    "Memantyna": "Antagonista receptora NMDA. Chroni komórki nerwowe przed toksycznym działaniem glutaminianu, stosowana w zaawansowanym otępieniu.",
+    "Trazodon": "Lek przeciwdepresyjny o działaniu uspokajającym i nasennym. Skuteczny w leczeniu depresji z lękiem i bezsennością.",
+    "Galantamina": "Inhibitor acetylocholinesterazy, podobnie jak donepezil, stosowany w leczeniu otępienia.",
+    "Kwasy omega-3": "Wspomagają zdrowie naczyń krwionośnych w mózgu, co może być korzystne w otępieniu naczyniowym."
+};
+
+// =================================================================================
+// KONFIGURACJA I ZMIENNE GLOBALNE
+// =================================================================================
+const TILE_SIZE = 32;
+const MAP_COLS = 25;
+const MAP_ROWS = 18;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = MAP_COLS * TILE_SIZE;
+canvas.height = MAP_ROWS * TILE_SIZE;
+document.getElementById('canvasWrapper').style.width = `${canvas.width}px`;
+document.getElementById('canvasWrapper').style.height = `${canvas.height}px`;
+
+const knowledgeUI = document.getElementById('knowledge');
+const medsUI = document.getElementById('meds');
+const patientsProgressUI = document.getElementById('patients-progress');
+const modalContainer = document.getElementById('modal-container');
+const modalMessage = document.getElementById('modal-message');
+const modalQuestion = document.getElementById('modal-question');
+const modalButtons = document.getElementById('modal-buttons');
+const modalFeedback = document.getElementById('modal-feedback');
+const modalOkBtn = document.getElementById('modal-ok');
+
+const TILES = { FLOOR: 0, WALL: 1, PLAYER: 2, KNOWLEDGE: 3, MEDS: 4, PATIENT: 5 };
+const COLORS = { WALL: '#4a5568', FLOOR: '#cbd5e0', PLAYER: '#4299e1', KNOWLEDGE: '#f6e05e', MEDS: '#f56565', PATIENT: '#48bb78' };
+
+const gameMap = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,2,0,0,1,3,0,0,1,0,0,0,0,0,0,1,5,0,0,0,1,3,0,0,1],
+    [1,0,0,4,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,4,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,0,1,1,1,0,1,1,4,0,1,0,1,1,1,0,1,1,1,0,1,1,1],
+    [1,4,0,0,1,0,0,0,1,0,0,0,0,0,1,5,0,0,0,0,0,0,0,4,1],
+    [1,0,0,0,1,0,3,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,4,0,0,0,0,1,0,0,0,0,0,4,0,0,0,1],
+    [1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,1],
+    [1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,1,1,1,1,1,1,5,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
+    [1,0,0,0,1,4,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,4,0,0,1],
+    [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,1,0,3,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,5,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,1],
+    [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+let player, gameState, totalPatients, medsOnMap, gamePaused, currentPatientCondition;
+
+// =================================================================================
+// INICJALIZACJA I GŁÓWNA LOGIKA
+// =================================================================================
+function init() {
+    player = { x: 0, y: 0 };
+    gameState = { knowledge: 0, meds: 0, patientsHelped: 0 };
+    totalPatients = 0;
+    medsOnMap = 0;
+    gamePaused = false;
+    currentPatientCondition = null;
+
+    for (let row = 0; row < MAP_ROWS; row++) {
+        for (let col = 0; col < MAP_COLS; col++) {
+            const tile = gameMap[row][col];
+            if (tile === TILES.PLAYER) {
+                player.x = col;
+                player.y = row;
+                gameMap[row][col] = TILES.FLOOR;
+            } else if (tile === TILES.PATIENT) {
+                totalPatients++;
+            } else if (tile === TILES.MEDS) {
+                medsOnMap++;
+            }
+        }
+    }
+    
+    updateUI();
+    drawGame();
+}
+
+function movePlayer(dx, dy) {
+    const nextX = player.x + dx;
+    const nextY = player.y + dy;
+
+    if (nextY < 0 || nextY >= MAP_ROWS || nextX < 0 || nextX >= MAP_COLS || gameMap[nextY][nextX] === TILES.WALL) {
+        return;
+    }
+
+    player.x = nextX;
+    player.y = nextY;
+    checkInteraction();
+    drawGame();
+}
+
+function checkInteraction() {
+    const tile = gameMap[player.y][player.x];
+    switch(tile) {
+        case TILES.KNOWLEDGE:
+            gameState.knowledge++;
+            gameMap[player.y][player.x] = TILES.FLOOR;
+            showKnowledgeModal();
+            break;
+        case TILES.MEDS:
+            gameState.meds++;
+            medsOnMap--; // Zmniejsz liczbę leków na mapie
+            gameMap[player.y][player.x] = TILES.FLOOR;
+            showMedsModal();
+            break;
+        case TILES.PATIENT:
+            triggerPatientEncounter();
+            break;
+    }
+    updateUI();
+}
+
+window.addEventListener('keydown', (e) => {
+    if (gamePaused && modalContainer.style.display === 'flex' && modalOkBtn.style.display !== 'none') {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            modalOkBtn.click();
+            return;
+        }
+    }
+
+    if (gamePaused) {
+        return;
+    }
+
+    let dx = 0, dy = 0;
+    switch(e.key) {
+        case 'ArrowUp': dy = -1; break;
+        case 'ArrowDown': dy = 1; break;
+        case 'ArrowLeft': dx = -1; break;
+        case 'ArrowRight': dx = 1; break;
+        default: return;
+    }
+    e.preventDefault();
+    movePlayer(dx, dy);
+});
+
+// =================================================================================
+// RYSOWANIE
+// =================================================================================
+function drawGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let row = 0; row < MAP_ROWS; row++) {
+        for (let col = 0; col < MAP_COLS; col++) {
+            const tile = gameMap[row][col];
+            let color;
+            switch(tile) {
+                case TILES.WALL: color = COLORS.WALL; break;
+                case TILES.KNOWLEDGE: color = COLORS.KNOWLEDGE; break;
+                case TILES.MEDS: color = COLORS.MEDS; break;
+                case TILES.PATIENT: color = COLORS.PATIENT; break;
+                default: color = COLORS.FLOOR;
+            }
+            drawTile(col, row, color);
+            if (tile === TILES.KNOWLEDGE) drawSymbol(col, row, '🧠');
+            if (tile === TILES.MEDS) drawSymbol(col, row, '💊');
+            if (tile === TILES.PATIENT) drawSymbol(col, row, '🧑');
+        }
+    }
+    drawTile(player.x, player.y, COLORS.PLAYER);
+    drawSymbol(player.x, player.y, '👨‍⚕️');
+}
+
+function drawTile(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+}
+
+function drawSymbol(x, y, symbol) {
+    ctx.font = `${TILE_SIZE * 0.7}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(symbol, x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2);
+}
+
+// =================================================================================
+// LOGIKA MODALI I UI
+// =================================================================================
+function updateUI() {
+    knowledgeUI.textContent = gameState.knowledge;
+    medsUI.textContent = gameState.meds;
+    patientsProgressUI.textContent = `${gameState.patientsHelped}/${totalPatients}`;
+}
+
+function showKnowledgeModal() {
+    gamePaused = true;
+    const knowledgeItem = medicalData[Math.floor(Math.random() * medicalData.length)];
+    modalMessage.textContent = `Nowa wiedza: ${knowledgeItem.name}`;
+    modalQuestion.innerHTML = `<strong>Opis:</strong> ${knowledgeItem.info}<br><br><strong>Leki wskazane:</strong> ${knowledgeItem.recommended.join(', ')}<br><strong>Leki przeciwwskazane:</strong> ${knowledgeItem.contraindicated.join(', ')}`;
+    modalButtons.innerHTML = '';
+    modalFeedback.style.display = 'none';
+    modalOkBtn.style.display = 'block';
+    modalOkBtn.onclick = () => { gamePaused = false; modalContainer.style.display = 'none'; };
+    modalContainer.style.display = 'flex';
+}
+
+function showMedsModal() {
+    gamePaused = true;
+    const drugNames = Object.keys(drugInfos);
+    const randomDrug = drugNames[Math.floor(Math.random() * drugNames.length)];
+    modalMessage.textContent = `Zebrano lek: ${randomDrug}`;
+    modalQuestion.innerHTML = `<strong>Działanie:</strong> ${drugInfos[randomDrug]}`;
+    modalButtons.innerHTML = '';
+    modalFeedback.style.display = 'none';
+    modalOkBtn.style.display = 'block';
+    modalOkBtn.onclick = () => { gamePaused = false; modalContainer.style.display = 'none'; };
+    modalContainer.style.display = 'flex';
+}
+
+function triggerPatientEncounter() {
+    if (gameState.meds < 1) {
+        showInfoModal("Brak leków!", "Potrzebujesz co najmniej 1 jednostki leków, aby pomóc pacjentowi. Znajdź je!");
+        return;
+    }
+    
+    gamePaused = true;
+    currentPatientCondition = medicalData[Math.floor(Math.random() * medicalData.length)];
+    
+    modalMessage.textContent = "Pacjent potrzebuje pomocy!";
+    modalQuestion.textContent = `Pacjent cierpi na: "${currentPatientCondition.name}". Który lek należy podać?`;
+    
+    const correctAnswer = currentPatientCondition.recommended[0];
+    const allDrugs = Object.keys(drugInfos);
+    const wrongAnswers = allDrugs
+        .filter(drug => !currentPatientCondition.recommended.includes(drug))
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+        
+    const options = [correctAnswer, ...wrongAnswers].sort(() => 0.5 - Math.random());
+    
+    modalButtons.innerHTML = '';
+    options.forEach(option => {
+        const button = document.createElement('button');
+        button.textContent = option;
+        button.className = 'modal-button option-button';
+        button.onclick = () => handlePatientAnswer(option === correctAnswer);
+        modalButtons.appendChild(button);
+    });
+
+    modalFeedback.style.display = 'none';
+    modalOkBtn.style.display = 'none';
+    modalContainer.style.display = 'flex';
+}
+
+function handlePatientAnswer(isCorrect) {
+    modalButtons.innerHTML = '';
+    modalFeedback.style.display = 'block';
+    gameState.meds--;
+
+    if (isCorrect) {
+        gameState.patientsHelped++;
+        modalFeedback.textContent = "Prawidłowa odpowiedź! Pacjent czuje się lepiej.";
+        modalFeedback.className = 'feedback-correct';
+        gameMap[player.y][player.x] = TILES.FLOOR;
+    } else {
+        modalFeedback.textContent = "Niestety, to zła odpowiedź. Lek został zużyty, ale pacjent nie poczuł się lepiej.";
+        modalFeedback.className = 'feedback-incorrect';
+    }
+    
+    updateUI();
+    modalOkBtn.style.display = 'block';
+    modalOkBtn.onclick = () => {
+        gamePaused = false;
+        modalContainer.style.display = 'none';
+        drawGame();
+        if (!checkWinCondition()) {
+            checkLoseCondition();
+        }
+    };
+}
+
+function showInfoModal(title, message) {
+    gamePaused = true;
+    modalMessage.textContent = title;
+    modalQuestion.textContent = message;
+    modalButtons.innerHTML = '';
+    modalFeedback.style.display = 'none';
+    modalOkBtn.style.display = 'block';
+    modalOkBtn.onclick = () => {
+        gamePaused = false;
+        modalContainer.style.display = 'none';
+    };
+    modalContainer.style.display = 'flex';
+}
+
+function showGameOverModal(title, message) {
+    gamePaused = true;
+    modalMessage.textContent = title;
+    modalQuestion.textContent = message;
+    modalButtons.innerHTML = '';
+    modalFeedback.style.display = 'none';
+    modalOkBtn.textContent = "Zagraj ponownie";
+    modalOkBtn.style.display = 'block';
+    modalOkBtn.onclick = () => location.reload();
+    modalContainer.style.display = 'flex';
+}
+
+function checkWinCondition() {
+    if (gameState.patientsHelped === totalPatients && totalPatients > 0) {
+        showGameOverModal("Gratulacje!", "Ukończyłeś misję! Pomogłeś wszystkim pacjentom. Szpital jest bezpieczny dzięki Tobie!");
+        return true;
+    }
+    return false;
+}
+
+function checkLoseCondition() {
+    const remainingPatients = totalPatients - gameState.patientsHelped;
+    const potentialMeds = gameState.meds + medsOnMap; // Leki w ekwipunku + leki na mapie
+    if (remainingPatients > 0 && potentialMeds < remainingPatients) {
+        showGameOverModal("Koniec gry", "Nawet zbierając wszystkie pozostałe leki, nie będziesz w stanie pomóc wszystkim pacjentom. Spróbuj ponownie!");
+    }
+}
+
+// =================================================================================
+// START GRY
+// =================================================================================
+init();
+</script>
+</body>
+</html>
